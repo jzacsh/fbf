@@ -1,0 +1,238 @@
+= Manual Setup: Rsync & Snapshotting
+Jonathan Zacsh
+:toc:
+:norsnap_push: http://rsnapshot.org/faq.html#can-i-set-the-snapshotroot-to-a-remote-ssh-path-i-want-to-push-my-backups-to-a-remote-server-rather-than-pull-them-from-a-remote-server
+:lan_whoSH: https://github.com/jzacsh/bin/blob/1e5ebaf2bdcd/share/lan_who
+:raspbianurl: https://www.raspberrypi.org/downloads/raspbian/
+:systemdmount: https://www.freedesktop.org/software/systemd/man/systemd.mount.html#fstab
+:archextdev: https://wiki.archlinux.org/index.php/fstab#External_devices
+:debianwikifstab: https://wiki.debian.org/fstab
+:mrubel: http://www.mikerubel.org/computers/rsync_snapshots/
+:manauthkeys: https://www.freebsd.org/cgi/man.cgi?sshd(8)#AUTHORIZED_KEYS%09FILE_FORMAT
+:rrsyncurl: https://download.samba.org/pub/unpacked/rsync/support/rrsync
+:rsshurl: https://manpages.debian.org/cgi-bin/man.cgi?query=rssh&apropos=0&sektion=0&manpath=Debian+unstable+sid&format=html&locale=en
+:logroturl: https://github.com/avian2/pylog2rotate
+
+Below is an outline of steps required to get automated, policy-driven,
+incremental, and hopefully encrypted backups footnoteref:[eventual, Eventually
+I'll try to link:design.adoc[automate much of this setup with harddrives and
+public keys]].
+
+For now, this file should simply document just what's involved in manual
+process, as there appears to be many moving parts to a correctly implemented
+"rsnapshot push". Though it is {norsnap_push}[_technically_ not possible to push
+with rsnapshot]
+
+== Dedicated Machine, Given Unused Hardware
+
+First time booting raspberry pi {raspbianurl}[from original `.iso` file]
+footnoteref:[raspbian, I recommend "raspbian jessie lite"]...
+
+[source, sh]
+----
+# default password is "raspberry"...
+
+@laptop $ ssh-copy-id -i ~/.ssh/your-normal-key pi@xxx.xxx.xxx.xx
+# ^ use your normal key, just for now
+# (you'll also upload single-purpose key later)
+
+@laptop $ ssh pi@xxx.xxx.xxx.xxx -i ~/.ssh/your-normal-key
+
+@pi $ sudo raspi-config
+  # at least: 1) make sure you expand filesystem
+  # at least: 2) change user password
+
+# to avoid collisions w/future raspberry pis (eg: "mybkupbox", below)
+@pi $ sudo $EDITOR /etc/hostname
+
+@pi $ for act in up{date,grade,date}; do sudo apt-get "$act" || break;done
+
+@pi $ sudo systemctl reboot && exit
+
+# that's it. now wait for reboot, so you can move to the next step...
+@laptop $ ping -W 40 xxx.xxx.xxx.xxx
+
+# while waiting, now might be a good time to update your local ~/.ssh/config to
+# point to the new hostname, eg:
+@laptop $ cat >> ~/.ssh/config <<EOFCONF
+Host mybkupbox.lan
+  User pi
+  IdentityFile ~/.ssh/your-normal-key
+EOFCONF
+----
+_(Note: assumes you know the raspberry pi's IP from your DHCP, otherwise, try
+{lan_whoSH}[this script to list IPs on your LAN])_
+
+== Dedicated HDD Host, Given Dedicated Machine
+
+Instructios to setup a dedicated machine (eg: raspberry pi) to recieve backups
+to an external drive.
+
+[source, sh]
+----
+@laptop $ scp rsnapshot.conf.template mybkupbox.lan:rsnapshot.conf.template
+@laptop $ ssh mybkupbox.lan
+
+# ^ ASSUMES you have IP/etc. in your personal ~/.ssh/config (see above section)
+
+# create a user, eg "backer", to separate activity from curent user, "pi" <1>
+@mybkupbox $ sudo useradd --system --create-home backer
+
+# make note of uid and gid; used below as "999" and "996"
+@mybkupbox $ sudo id backer
+
+@mybkupbox $ sudo mkdir ~backer/tmp.backerconfs
+@mybkupbox $ sudo chown -R backer:backer ~backer/tmp.backerconfs
+@mybkupbox $ sudo chmod 7750 ~backer/tmp.backerconfs/
+@mybkupbox $ sudo mkdir -p /mnt/backuphdds/terraspin
+
+# look for your external harddrive (eg: /dev/sda1 below)
+@mybkupbox $ sudo fdsik -l
+@mybkupbox $ sudo blkid # look for /dev/sda1's UUID:
+  # note "UUID" of intended backup driv (eg: 123, below)
+  # note "TYPE" value (eg: ext4, below)
+
+# pick meaningful name for this drive (eg: "terraspin", below)
+
+@mybkupbox $ sudo $EDITOR /etc/fstab # make *sure* to use "nofail" below <2>
+  # 2016-07-03, inserted by jzacsh@ to collect backups <3>
+  UUID=123 /mnt/backuphdds/terraspin ext4 defaults,nofail,x-systemd.automount,x-systemd.device-timeout=3min 0 1
+  tmpfs /home/backer/tmp.backerconfs tmpfs defaults,uid=999,gid=996,size=10K,mode=7770 0 0
+
+@mybkupbox $ sudo mv -v {~backer/,}rsnapshot.conf.template # <4>
+
+# test to see that your fstab change works:
+@mybkupbox $ sudo mount /mnt/backuphdds/terraspin
+
+# only once: fix permissions while you've successfully mounted:
+@mybkupbox $ sudo chown -cR backer:backer /mnt/backuphdds/terraspin
+
+@mybkupbox $ sudo apt-get install rsync rsnapshot
+@mybkupbox $ sudo systemctl enable rsync.service
+
+# that's it, we're done setting up the machine
+@mybkupbox $ sudo systemctl reboot && exit
+----
+<1> Note: if link:design.adoc[automation is ever achieved], then metadata will
+be automated and managed via a daemon, thus the need for a `backer` user to have
+a home directory will be obsolete. here, the only foreseen need of a `$HOME` is
+to hold `$HOME/.ssh/authorized_keys` entries.
+<2> for more on `/etc/fstab`, see
+* {systemdmount}[fstab section of `systemd.mount(5)`]
+* this {archextdev}[Arch's practical tips on external devices]
+* and/or {debianwikifstab}[Debians' thorough wiki explaining `fstab`]
+<3> the values used on this `fstab` line are *specific* and based on previous
+commandline "example" output, so don't just copy/paste things like "123" or
+"foo-bar" blindly.
+<4> Latest version of `./rsnapshot.conf.template` can be found in this repository
+
+== Rsync/Snapshotting Host, Given Dedicated HDD Host
+
+Given we've a machine - as described in the previous section wih a raspberry pi
+- and a large external harddrive, below I'll detail the final server step:
+having said machine recieve incremental backups, and rotate snapshots of them
+footnoteref:[mrubel, Checkout {mrubel}[Mike Rubel's post] for a nice overview
+showing how fundamentally simple this process really is].
+
+[source, sh]
+----
+me@laptop $ scp rrsync mybkupbox: # <1>
+me@laptop $ scp rsyncrotate-forcedcmd.sh mybkupbox: # <2>
+me@laptop $ ssh mybkupbox
+@mybkupbox $ sudo mv {,~backer/}rsyncrotate-forcedcmd.sh
+@mybkupbox $ sudo chown backer:backer ~backer/rsyncrotate-forcedcmd.sh
+@mybkupbox $ sudo chmod 744 ~backer/rsyncrotate-forcedcmd.sh
+----
+<1> Download latest {rrsyncurl}[`rrsync` from the project website]
+<2> Download latest copy of this script
+link:../src/rsyncrotate-forcedcmd.sh[from this repo]. *WARNING*: the values in
+this script are not properly parameterized. This script should be carefully
+checkeand made dynamic to take the specifc values to each use-case of this
+document.
+
+=== TODO List for `ForceCommand`
+. *urgent*: cleanup `hourly.base_XXXXX.d` on failure
+. *urgent*: replace `rsnaphot $interval` call w/:
+.. always push into N-intervals on `hour`
+.. *everything* else is a ISO `YYYY-MM-DDTHH.MM.SS.UTC` *daily* snapshot +
+    (ie: snapshots are *unique* at top-level for their `DD` value)
+.. better snapshotting: {logroturl}[`log2rotate`] cli
+. *urgent*: replace public-key readings with config-file approach (eg: yaml?)
+.. define config file format that holds critical info:
+... public key we've been using
+... preferred retention info (eg: no. of daily to retain, no. of hourly)
+... ? email address to contact
+... machine name? free-form description text? machine-name as readable prefix?
+. *urgent*: after fixing pubilc-key readings, add new remote `command` +
+.. should be able to *add* new key/key-config once a key is in the system
+. *urgent*: re-review this list - havne't checke it in a while:
+. *urgent*: do not force "hourly.0"; instead throw error if one isn't provided
+  or seen (which matches the rsnapshot conf's declared intervas) in:
+  `"$(basename "$SSH_ARG")"`; This approach should allow arbitrarily `rsync`
+  pull or push of any particular snapshot.
+. *important*: for push: consider magic trailing dir (see above "urgent" note)
+  of `auto` which figures out when the last push was, and sets the interval
+  accordingly
+. *mild*: alternative to throwing exception, per above, is always
+  defaulting to hourly.0, for *pull*
+. *backburner*: consider how {rsshurl}[`rssh`] might help general restriction
+  before reaching rrsync
+
+== Adding a User, Given an Rsync/Snapshotting Host
+
+Here we'll assume `friend` is someone else. They want to send their backups to
+your new machine _(setup above)_. Eventually you, as `me@laptop`, act on their
+results, and interact with said `@pi` machine accordingly to given `friend@`
+address. This all applies equally if "friend" is actually you, for any of your
+machines _(including the machine you've been using all along that we've called
+`laptop`)_.
+
+[source, sh]
+----
+friend@ $ ssh-keygen -N '' -f ~/.ssh/key-for-cron.backups
+
+# assuming you download an emailed copy into ~/Downloads/key-for-cron.backups
+me@laptop $ scp ~/Downloads/key-for-cron.backups mybkupbox:friend.pub
+me@laptop $ ssh mybkupbox
+
+@mybkupbox $ sudo mkdir ~backer/.ssh/ # only necessary the first time
+@mybkupbox $ echo '
+  (
+    fprint="$(ssh-keygen -l -f friend.pub | cut -d ' ' -f 2 | sed -e 's|:||g')"
+    cmdOpts="no-port-forwarding,no-x11-forwarding,no-agent-forwarding,no-pty"
+    printf \
+       "\"command=/home/backer/rsyncrotate-forcedcmd.sh %s\",%s %s\n" \
+       "$fprint" "$cmdOpts" "$(< friend.pub)"
+  ) >> ~backer/.ssh/authorized_keys' | sudo -s # <1>
+
+# also, only necessary if this is the first time:
+@mybkupbox $ sudo chmod 700 ~backer/.ssh/
+@mybkupbox $ sudo chmod 600 ~backer/.ssh/authorized_keys
+@mybkupbox $ sudo chown -cR backer:backer ~backer/.ssh/
+
+@mybkupbox $ rm ./friend.pub # optional
+----
+<1> for more on `authorized_keys` file, see the {manauthkeys}["AUTHORIZED_KEYS
+FILE FORMAT" section of sshd(8) manual]
+
+== Backing Up, Given User-Accss to Rsync/Snapshotting Host
+
+.TODO explain link:../src/sync_to_mirrors[`sync_to_mirrors` shell script].
+. *urgent*: add `-m` flag to `sync_to_mirror` to take (m)irror-file
+. *urgent*: add `-e` flag to `sync_to_mirror` to take (e)excludes-file
+
+=== Wrapper: Best Practice on Destination
+Note: it is *highly* recommended that backups are sent with a wrapper script
+for obvious reasons, but most importantly to ensure destination path of backups
+always have a consistent prefix directory. That is: the thing uniquely
+identiying the backup, to your server _(above)_, is the SSH key being used. If
+the ssh is ever used again _(eg: your laptop and you phone both use the same
+key to backup to this server)_, then your own backups will collide.
+
+For example, instead of:
+[source, sh]
+  @mylaptop $ rsync ~/Documents/ mybkupbox:Documents/ # bad
+
+I instead recommend prefixing, as such:
+[source, sh]
+  @mylaptop $ rsync ~/Documents/ mybkupbox:mylaptop/Documents/ # better

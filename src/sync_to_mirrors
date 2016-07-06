@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+#
+# Syncs files to each expected host
+set -euo pipefail
+
+#################################################
+# defaults ######################################
+declare -r hostListName=sync_to_mirrors.hosts
+declare -r excludeListName=sync_to_mirrors.excludes
+declare -a _rsyncOpts=(
+  verbose
+  recursive
+  delete
+  archive
+  acls
+  xattrs
+);
+#################################################
+# utils and such, nothing~ish executed here #####
+rsyncOpts() ( printf -- ' --%s ' "${_rsyncOpts[@]}"; )
+helpHostFile() ( printf '$XDG_CONFIG_HOME/%s' "$hostListName"; )
+helpExcludeFile() ( printf '$XDG_CONFIG_HOME/%s' "$excludeListName"; )
+declare -A optDoc=(
+  [m:]="FILE: provide mirrors, ignoring ""$(helpHostFile)"
+  [q]="quiet mode: no stdout - ie: only log errors and warnings to stderr"
+  [n]="noop mode: clean run - ie: only print, don't actually do anything"
+  [d]="no defaults: don't pass default flags to rsync"
+  [h]="help - this document"
+); declare -r optDoc
+declare -A opts=() # user-enabled options
+for k in "${!optDoc[@]}"; do opts+=(["${k/:/}"]=0); done
+
+_this="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"; declare -r _this
+_log() (
+  local tag="$1" msg="$2"; shift 2
+  printf -- "[%s] ${tag}: $msg" "$(date --iso-8601=s)" "$@"
+)
+log() ( local m="$1"; shift; (( ${opts[q]} )) || _log INFO "$m" $@ >&1; )
+dbg() ( local m="$1"; shift; ! (( ${opts[n]} )) || _log DEBUG "$m" $@ >&2; )
+err() ( local m="$1"; shift; _log ERROR   "$m" $@ >&2; )
+wrn() ( local m="$1"; shift; _log WARNING "$m" $@ >&2; )
+_listUncommentedLines() (
+  # Does the following:
+  # - ignores comments,
+  # - trim surrounding space,
+  # - delete empty lines,
+  # - remove repeated entries
+  sed \
+    --expression 's|#.*$||g' \
+    --expression 's|[[:space:]]*$||' \
+    --expression 's|^[[:space:]]*||' < "$1" |
+    sed '/^[[:space:]]*$/'d |
+    uniq --unique
+)
+usage() (
+  printf -- '
+Usage:  `%s -[%s] %s SOURCE_DIR [RSYNC_ARGS...]`\n
+ Runs rsync from SOURCE_DIR to each host in
+   %s
+   Note: file path can be overriden with -m flag.
+
+ Summary:
+  Optionally passes any remaining RSYNC_ARGS as-is to rsync.
+  Defaults to using the following rsync(1) flags (disabled with -d flag):
+    %s
+
+  Excludes for rsync(1) maybe listed, one-per-line in:
+    %s
+
+ Optional flags:\n%s\n\n' \
+  "$_this" \
+  "$(printf '%s' $(printf '%s\n' "${!optDoc[@]}" | grep -vE ':'))" \
+  "$(
+    for key in "${!optDoc[@]}";do
+      [ "${key/:/}" != "$key" ] || continue
+      doc="${optDoc[$key]}"
+      printf -- '[-%s %s]' "${key/:/}" "${doc/:*/}"
+    done
+  )" \
+  "$(helpHostFile)" \
+  "$(rsyncOpts)" \
+  "$(helpExcludeFile)" \
+  "$(
+    for key in "${!optDoc[@]}";do
+      printf -- '    -%s    %s.\n' "${key/:/}" "${optDoc[$key]}"
+    done
+  )"
+)
+#################################################
+# Command line processing: ######################
+OPTIND=1 # reset, just in case
+while getopts "$(printf '%s' "${!optDoc[@]}")" opt;do
+  case "$opt" in
+    d|n) opts["$opt"]=1;;
+      q) opts["$opt"]=1
+      for idx in "${!_rsyncOpts[@]}";do
+        if [ "${_rsyncOpts[$idx]}" = verbose ];then
+          unset _rsyncOpts["$idx"]
+        fi
+      done
+      ;;
+    m) opts["$opt"]="$OPTARG";;
+    ':')
+      err 'missing required argument to -%s flag\n' "$OPTARG"
+      usage >&2
+      exit 1
+      ;;
+    h) usage; exit 0;;
+    \?) usage >&2; exit 1;;
+  esac
+done
+shift "$(( $OPTIND - 1))" # get all paremeters getopts didn't use
+
+[ $# -gt 0 ] || {
+  err 'missing arguments, see usage\n'
+  usage >&2
+  exit 1
+}
+{ [ $1 = '-h' ] || [ $1 = 'help' ]; } && { usage; exit 0; }
+declare -r source="$1"; shift
+[ -n "${source/ */}" ] || {
+  err 'expecteded source content to be backed up'
+  exit 1
+}
+declare -a extraRsyncOpts="$@"; declare -r extraRsyncOpts
+#################################################
+# Done processing. Start actual script ##########
+hostListFile="${XDG_CONFIG_HOME:-$HOME/.config}/$hostListName"
+[ "${opts[m]}" = 0 ] || hostListFile="${opts[m]}"
+declare -r hostListFile
+{ [ -f "$hostListFile" ] && [ -r "$hostListFile" ]; } || {
+  err 'readable host list not found at %s file path:\n\t%s\n%s' \
+    "$(if [ "${opts[m]}" = 0 ];then echo default; else echo custom; fi)" \
+    "$hostListFile"
+  exit 1
+}
+hostList() ( _listUncommentedLines "$hostListFile"; )
+
+excludeList="${XDG_CONFIG_HOME:-$HOME/.config}/$excludeListName"
+declare -r excludeList
+rsyncExcludes() (
+  [ -f "$excludeList" ] || return 0
+  printf -- " --exclude='%s' " "$(_listUncommentedLines "$excludeList")"
+)
+if [ -f "$excludeList" ];then
+  [ -r "$excludeList" ] || {
+    err 'Exclude list exists but is not readable\n\t%s\n' "$excludeList"
+    exit 1
+  }
+fi
+
+hostCount="$(hostList | wc -l)"; declare -r hostCount
+[ "$hostCount" -gt 0 ] || {
+  err 'host list file is empty:\n\t%s\n' "$hostListFile"
+  exit 1
+}
+
+declare -a failedHosts=()
+log 'syncing to %d host(s)...\n' $hostCount
+while read host;do
+  dbg 'processing, "%s"\n' "$host"
+
+  if (( ${opts[n]} ));then rsync() ( echo '[mock]rsync' "$@" >&2; );fi
+
+  if ! {
+    rsync \
+      $( [ ${opts[d]} -ne 0 ] || rsyncOpts ) \
+      ${extraRsyncOpts[@]} \
+      $(rsyncExcludes) "$source" "$host"
+  }; then
+      err 'host, "%s", failed; trying next host...\n' "$host"
+      failedHosts+=("$host")
+  fi
+done < <(hostList)
+
+numFailed=${#failedHosts[@]}; declare -r numFailed
+[ $numFailed -eq 0 ] || {
+  if [ $numFailed -eq $hostCount ];then
+    err 'ALL %d hosts failed; nothing backed up\n' $numFailed
+  else
+    err 'Some %d hosts failed; only partially backed up\n' $numFailed
+  fi
+  exit 1
+}
+
+log 'Succeeded syncing to %d mirror%s\n' \
+  "$( [ "$hostCount" -eq 1 ] || echo -n all )" \
+  $hostCount \
+  "$( [ "$hostCount" -eq 1 ] || echo -n s )"

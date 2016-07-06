@@ -1,0 +1,336 @@
+= System Design
+Jonathan Zacsh <jzacsh@gmail.com>
+v0.12, 2016-05-23
+:resticurl: https://restic.github.io
+:borgbkurl: https://borgbackups.readthedocs.io
+:mr_hlink: http://www.mikerubel.org/computers/rsync_snapshots/
+:likeahawk: https://wiktionary.org/wiki/watch_like_a_hawk
+:plugpc_or_rapsbPi: https://wikipedia.org/wiki/Plug_computer
+:gitauthpy: https://github.com/lfos/aurweb/blob/d38a562b4d/git-interface/git-auth.py
+:toc:
+{toc}
+
+Highest-level design of multi-homed capable backup system. Design below is
+broken into two main components: <<wrapper, client>> and <<replication, server>>
+binaries, with an <<future, addendum for future components>>.
+
+
+== Design Goal
+
+Design goals, in no particular order, are:
+
+* overall simplicity _(debuggable)_
+* multi-homed destination
+** destination agnostic _(eg: AWS, GCE, Raspberry PI, `/mnt/mythumbdrive`)_
+* encryption, incremental, not-in-PHP
+  _(ie: *all* {resticurl}[restic's brilliant work], or {borgbkurl}[borgbackup's])_
+* easily monitored _(debuggable, trustworthy)_
+
+These goals are hopefully achievable by:
+
+. using a thin `restic` *wrapper for replication & reporting* +
+  _(on the machine where source data lives)_
+. an on-destination daemon with the sole purpose of ensuring incoming backups
+  are unhindered
+
+[[wrapper]]
+== Encrypted Backup Wrapper aka "Client"
+
+Client should be a thin wrapper around a project that already achieves
+encrypted, differential backups - eg: {borgbkurl}[borgbackup] or
+{resticurl}[`restic`]. The job of the wrapper is simply to take N restic mirrors
+and do the *additional* work of replicating restic's changes to each. Below the
+client will be referred to as `wrapper` to distinguish it from real restic
+commands (or borgbackup). More about repository <<replication, below on
+Replication>>
+
+=== System from Backup's Perspective
+....
+         +-------+ <1>
+         | Phone |
+         +-------+        `restic`  +--------+
+                        o---------> | Host1  | <2>
+        +--------+     /            +--------+
+        | Laptop |----o
+        +--------+     \            +--------+
+                        o--> cp --> | Host2  |
+       +---------+      |           +--------+
+  o--> | Desktop |      |
+  |    +---------+      |           +--------+
+  |                     o--> cp --> | Host.. | <3>
+  |    +---------+      |           +--------+
+  o----| Cloud A |      |
+  |    +---------+      |           +--------+
+  |                     o--> cp --> | HostN  |
+  |    +---------+                  +--------+
+  o----| Cloud Z |
+       +---------+ <4>
+....
+<1> NOTE: Laptop backup is arbitrarily demonstrated here, but it is the same for
+    the - hopefully auto-scheduled - Desktop and phone solutions
+<2> (wrapper) simple use of restic from "{laptop,laptop,phone}" to "Host1"
+<3> (wrapper) duplication of no.1 onto Host{2...n}
+<4> separately cloud backups should likely be owned by one host (ie: this is a
+    separate issue - likely(?) outside the scope of this architecture).
+
+Existing `Restic` API
+[source, sh]
+restic  backup precious/content -r host:myrepo/
+
+vs. intended *Wrapper*
+[source, sh]
+wrapper backup precious/content    host1:myrepo/ host2:myrepo/ host3:myrepo/
+
+[[vswrapper]]
+|===
+| Binary | Common CLI | Repository | Reports Back
+
+| `restic` | `backup precious/content` | `-r host:myrepo` | Reports `host:myrepo` backup
+
+| `wrapper` | `backup precious/content` | `host{1,2,3}:myrepo` | Reports each host's backup +
+*and* Full monitoring on each host's OS
+|===
+
+[[wrapperalgo]]
+=== Backup Algorithm
+
+Given the following command line:
+
+[source, sh]
+wrapper backup precious/content host1:myrepo/ host2:myrepo/ host3:myrepo/
+
+[arabic]
+. run `restic` against first successful `hostN` (say `host_b`)
+. for each remaining `hN` in `host{0..N}`:
+.. `rsync` - {mr_hlink}[hard-link option] - new backup from `host_b` up to `hN`
+.. report back on success of copy to `hN`
+.. (optionally) report back on `hN` overall status +
+   (perhaps <<replicalogs, a ready-waiting aggregated logs>> about the `hN`)
+
+Care should be taken in copying these logs down so as to not actually *bloat* the
+local source of the backup.
+
+=== Avoiding Cyclical Backups
+
+This is a tiny issue - but probably easy to overlook: this wrapper *should*
+function well running *on* a host with the below <<replication, daemon>>
+running. If so: make sure *this* wrapper panics if said daemon's drives are ever
+*in* the backup source.
+
+=== Restore Algorithm
+Simply `restic restore` as normal. Being the client is such a thin wrapper
+around restic, the repositories can be `restic restore`d from as normal
+_(perhaps this wrapper can provide some sugar atop that picks a host by default
+to restore from - eg: localhost, assuming that's one)_.
+
+
+
+
+[[replication]]
+== Repo Replication aka "Server"
+
+Each host/replicate - passed to the above-illustrated wrapper - will have an
+<<degrade, optionally>> running system daemon that provides:
+
+. <<plugplay, plug-and-play>> hard-drive support
+. <<replicalogs, system monitoring>>
+. <<availability, keeps the system up>>
+. does all of the above without any state on-disk
+  footnoteref:[logspace, TODO: Aside from system logs whose storage is still
+  unclear - perhaps custom work is duplicated to each plugged in drive]
+
+Each of these points is described in more detail below.
+
+[[degrade]]
+=== Disclaimer: Degrade to Restic Itself
+
+First, it's important to note that the above client knows nothing about its
+repository target (*just* like the `restic` binary it wraps). Notably, the
+<<vswrapper, only thing the wrapper should do>> is look for a magic log file on
+the other end. That is, even this should work:
+
+[source, sh]
+wrapper backup $HOME /mount/my-external-hardrive/
+
+At which point, the complexity of infrastructure here no longer matters. No
+network connection takes place, no OS system health is probed from a magic file,
+etc. The above command, then, should perhaps have no perceptible difference to
+calling `restic` itself with the added `-r` flag.
+
+[[plugplay]]
+=== Daemon: Plug & Play Access Control
+
+==== Motivating Scaling-Friends Use Case: Alice, Bob, Carol
+
+Before describing the plug-and-play API this daemon provides, it is helpful to
+look at the use-case. One of the core goals of this entire document is
+"hands-off". In practice, this means that two friends - Alice and Bob - should
+be able to rely on eachother's extra closet as a single remote replica.
+Importantly: the initial exchange should be simple, and adding/removing friends
+should be simple. This means if Carol wants to donate her closet space *and* add
+her own backups to Alice and Bob's respective closets, then it is hopefully as
+simple as adding more hard-drives to the picture: 3 to be exact.
+
+.Fictitious Time-line of Closet Federation
+. Alice sets up her own home-backups:
+.. she adds {plugpc_or_rapsbPi}[cheap plug-computer] to her closet
+.. she *installs our daemon* on said computer
+.. she plugs in a dedicated HDD, named `bananas`, with a *public key on it*
+.. she now sends backups to `backup@alice-closet-fqdn:backups/repo_name` +
+   `bananas` HDD now accumulates restic backups at the root, under
+   `repo_name` strings, eg: "my_phone", "my_desktop"
+. Bob sets up his own backups (same as above, for his own closet & own HDD) +
+  eg: HDD called `hedgehog`, sends to `backup@bob-closet-fqdn:backups/repo_name`
+. Alice gives Bob another hardrive, eg `strawberries` +
+  with *identical* public key on it as `bananas`
+.. Bob plugs `strawberries` into his closet PC
+. Bob gives Alice another hardrive, eg `ponies` +
+  with *identical* public key on it as `hedgehog`
+.. Alice plugs `ponies` into her closet PC
+. When Carol comes along she (assuming she has a closet setup):
+.. receives Alice's *third* HDD w/public key identical to that on `bananas`
+.. receives Bob's *third* HDD w/public key identical to that on `hedgehog`
+.. hands Alice & Bob's each a HDD, both containing public key identical to
+   what's already on the HDD in her own closet
+
+----
+               alice      bob      carol
+
+                .^.       .^.       .^.
+               /   \     /   \     /   \
+              +-----+   +-----+   +-----+
+Homes:        |  A  |   |  B  |   |  C  |
+              +-----+   +-----+   +-----+
+               / | \     / | \     / | \
+HDDs:         a  b  c   b  a  c   c  a  b
+
+              ^            ^         ^
+               \           |        /
+                \          |       /
+                 \         |      /
+                  \        |     /
+         ----------+-------+----+--------------
+eg:      ( HDDs w/Alice's public key on them  )
+----
+
+The missing detail not described here is how SSH access is setup for alice to
+allow her to access her own HDD, without knowing the system path it was mounted
+under or having forced Bob and Carol to manually add her to their
+`/etc/sshd_config` files. This is the job of the daemon.
+
+Upon installation, the daemon:
+
+. does general checks to ensure system <<availability>>
+. adds a generic `backup` `$USER` to system
+. <<sshauth, `sshd_config` is setup correctly>>
+
+At runtime, the daemon listens for `udev` events. When a storage device is
+plugged in, if it contains an SSH public key (like the `ponies` HDD Bob hands
+Alice), the daemon:
+
+. adds public-key found on `ponies` to the allowed-keys for `backups` user's SSH
+. <<sshauth, captures>> connection from Bob's ssh key:
+.. isolates `backups` user to reads/writes syscalls on `ponies` HDD
+. <<sshauth, captures>> connection  from Alice's ssh key:
+.. isolates `backups` user to reads/writes syscalls on `strawberries` HDD
+
+[[sshauth]]
+.Automatic Maintenance of `sshd_config(5)`
+. ensures `backup` user exists with limited (or no?) SSH access
+. ensures ssh access is key-based only
+. via `AuthorizedKeysCommand`, ensures authentication passes if either:
+** the key of an _actual_ unix `$USER`
+** or public key exists on attached backup-drive; +
+in the case of key-authentication via attached drives, commands must be
+jailed/isolated to that particular drive footnoteref:[sshauthconf,
+TODO(research) still unclear how to achieve above auto-maintenance of requests.
+Perhaps something that emits `SSH_ORIGINAL_COMMAND` into a chroot command? (for
+some inspiration perhaps see {gitauthpy}[AUR's homebrewed git-auth logic])]
+
+[[replicalogs]]
+=== Daemon: Deep Logs
+TODO(research) what kind of logs are typically gathered on a linux machine?
+`/var/log/*`? less? more?
+TODO(research) given said standard log dumps, which logs do we *add* of our own
+accord that are not already covered? Daemon's own log file? Daemon status dump
+(last encountered problems, last backup events, etc.? -- already captured by
+daemon's log file?)?
+
+[[availability]]
+=== Daemon: Ensures Availability
+TODO: flesh out some mutations to the system that this daemon should
+{likeahawk}[watch-and-maintain]:
+
+. if stuck, reboot & log as a critical problem. +
+  TODO(research) over my head - must be a well written about problem. how do we
+  know we're not just rebooting multiple times? Log file with counter? Seems
+  fragile and easy to screw up... Also what heuristic indicates "system is
+  stuck"?
+. ensures OS config is never such that it will stop mid-boot, waiting for drives
+.. eg: complains if the root FS is encrypted (this will inhibit hands-off boot)
+
+TODO(research): common ways to keep a linux system up from unnecessary blockage
+
+[[deletionpolicy]]
+==== Space: Handling Disk-Full Events
+TODO(research): common deletion policies. this is a probably *very* well solved,
+and complicated problem - figure out some of the common pitfalls, and the best
+way to be flexible about this issue (or perhaps there's only one right way - and
+we should know about and implement it).
+
+==== Network: Ensuring FQDN Exists
+TODO(research): are most solutions now-a-days `curl
+http://some.service/[someuniquehash]` (like dhcp.io)? If so, can we embed he
+hash/URL/whatever into our daemon's config - this way we ensure it is something
+that *has* to be considered in order for someone to install the daemon?
+
+== Roadmap: Milestones to Implementation
+
+In order of the most unique & useful, milestones that might be tackled:
+
+. _(daemon)_ <<plugplay, "plug & play" HDD mapper>>
+. _(client)_ a binary w/<<wrapperalgo, ability to replicate>> a `restic` repo w/minimal overhead
+. _(daemon)_ noop: config file to control it's behaviors
+  footnoteref:[confguard, double-benefit is this acts as runtime flag-guard]
+. _(daemon)_ ability to <<deletionpolicy, manage disk space>>
+. _(daemon)_ unified <<eplicalogs, logging>>; eg: hostN-health, deletions, backups, etc.
+. _(client)_ post-backup reporting:
+.. <<wrapper, pull-of-logs>> ->
+.. <<future, aggregate>> ->
+.. <<statusux, status UX>>
+
+[[future]]
+== Far-Future Visions
+
+Outlined here are future grand-visions, after the fundamental design above is
+implemented.
+
+.Additions for a Truly Trustworthy, Yet Passive/Hands-Off Backups Need
+. [[statusux]] Mobile-Friendly Web UI For:
+.. *status* (in binary: green/red): an `AND` across all components
+.. *diagrams* - auto generated visuals of systems interacted, including:
+... live component information _(eg: same from below's "status" or "deep dive")_
+... corresponding documentation within this FOSS project
+.. *component deep dives*; ie: "scroll below the fold"-look at any "status"
+   footnoteref:[belowfold, Gives crucial ability to spot-check as much as you
+   want - just to sanity check the "status" above]
+... quick/*overall* of backup
+... status of *each* backup repo you own
+    footnoteref:[alllogs, Should link to full system logs]
+... quick/*overall* replica/host status
+... status of *each* replica/host footnoteref:[alllogs]
+. Testing Backups; or is `restic restore` FUSE UI is as simple as it gets?
+  footnoteref:[testbackups, Design consideration is needed for how we can
+  simplify *testing* backups occasionally. Does this depend too heavily on each
+  user? Or is restic's own `restore` good enough?]
+. *Correct*, Visual Documentation +
+  This entire design doc should be turned into a:
+.. high-level visual diagram
+.. textual doc _(just like any other project)_
+. *Quickstart Guide* or "Build Your Own Adventure Kit" +
+ _(via diagram & bulleted-list)_
+.. system components _(helping identify missing machines/choices)_
+.. for each component:
+... purchasing link _(direct deep-links to Shopping sites)_
+... benefit of adding it
+... deep link to its respective place in larger docs

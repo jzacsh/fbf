@@ -1,0 +1,88 @@
+= Backups: Robust, Easy, Multi-homed, FOSS
+Jonathan Zacsh
+:grandurl: link:doc/design.adoc
+
+FOSS backup vaporware.
+
+== Status
+
+I'm currently not achieving any of my {grandurl}[lofty goals]. In one sentence,
+I imagined friends/family sending each other hard drives with public keys in
+their root, and no one having to touch any config to keep things running _(ie: I
+particularly wanted *non*-programmer friends to feel empowered to host!)_
+Unfortunately, I haven't reached the parts I even find interesting in this goal
+yet _(auto-detection of keys, auto-configuration, multi-homed for the masses,
+etc.)_
+
+*tl;dr* But, hope isn't lost just yet. I'm currently walking through setup of a
+push-to-server rsnapshot solution, and documenting the experience in
+link:doc/labor.adoc[`labor.adoc`] (<<serverlabor, summary>>).
+
+== (Imagined) FAQ
+Why release?? You have nothing to show!::
+  Because I was feeling cramped in the massive "private" gist I was developing
+  in. Working without directories is hard.
+What's the tl;dr of your `labor.adoc` progress?::
+  Good! I currently have `rsync ./stuff/ host:` automagically snapshotting, so
+  my hopes are high! See more in that doc's, "TODO List for `ForceCommand`"
+Bash?::
+  I'll happily port stuff to go, but for now everything is small and I'm fine
+  with it. The aggressive daemon I plan to build will definitely be written in
+  golang from the star. 
+
+== Backup Infrastructure Goals:
+.Backups...
+. I can trust run well
+  footnoteref:[trust, By "trust" I mean designed once and only once] 
+. I don't have to think about
+  footnoteref:[debug, Called "debuggability" in other notes]
+. Mirror a professional solution I could imagine paying others to maintain
+  footnoteref:[sre, "Maintain" does not mean "fork then enterprise-version-ify";
+  I a want *complete* solution that would only require SREs because the need for
+  *someone* to watch and debug a system is just an unavoidable]
+. I *could* host without any loss in quality
+  footnoteref:[qualityloss, Aside from the fact that I'm less reliable than a
+  team of people I would be paying a fee to :P]
+
+== Under Construction - Prototyping Efforts
+
+=== 2016-06-28: sshd Watch Daemon
+
+.Local Scripting Prototyping Files
+. `backup-to-disk_daemon.rules`
+. `prototype-sshd-mod.sh`
+. `prototype-sshd-watch.sh`
+
+[source, sh]
+  debugrule="$(readlink -f 10-DEBUGGING-backup.rules)"
+  pushd /etc/udev/rules.d/
+  sudo ln -sv "$debugrule" 10-DEBUGGING-backup.rules
+  popd
+  sudo udevadm control --reload
+
+=== 2016-07-02: rsync to many hosts
+
+[source, sh]
+----
+$ ./sync_to_mirrors -h
+usage: `sync_to_mirrors SOURCE_DIR [DEST_DIR_SUFFIX]`
+
+  Runs rsync from SOURCE_DIR to each host in "$XDG_CONFIG_HOME/backupto.hosts";
+
+  Uses rsync(1) flags:
+     --verbose  --recursive  --delete  --archive  --acls  --xattrs
+
+  Optionally: list rsync(1) excludes, one per line in "$XDG_CONFIG_HOME/backupto.excludes"
+----
+
+[[serverlabor]]
+=== 2016-07-03: Rsync & Rotation
+Though my end-goal  is as hands-off as possible, I have to start somewhere, so
+I'm link:labor.adoc[documenting all of the *manual* labor involved in setting
+up the underlying system]. The setup is what I'd fundamentally like to automate,
+so this documentation effort will help in a few ways:
+
+. should clarify *what* value I'm trying to add
+  (eg: I'm not re-inventing snapshotting)
+. should clarify how much labor is involved
+. should serve as great task-list when tackling the ultimate automation

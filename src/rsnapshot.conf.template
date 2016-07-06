@@ -1,0 +1,50 @@
+# rsnapshot.conf - rsnapshot configuration file #
+config_version	1.2
+
+snapshot_root	BACKER_MNT_PATH/
+no_create_root	1
+
+# EXTERNAL PROGRAM DEPENDENCIES
+cmd_cp		/bin/cp
+cmd_rm		/bin/rm
+cmd_rsync	/usr/bin/rsync
+cmd_logger	/usr/bin/logger
+cmd_du		/usr/bin/du
+cmd_rsnapshot_diff	/usr/bin/rsnapshot-diff
+
+#cmd_preexec	/path/to/preexec/script
+#cmd_postexec	/path/to/postexec/script
+
+#           BACKUP INTERVALS
+# Must be unique and in ascending order
+# i.e. hourly, daily, weekly, etc.
+retain		hourly	6
+retain		daily	7
+retain		weekly	4
+retain		monthly	3
+
+# All are optional, with sensible defaults
+##########################################
+
+# Verbose level, 1 through 5.
+# 1     Quiet           Print fatal errors only
+# 2     Default         Print errors and warnings only
+# 3     Verbose         Show equivalent shell commands being executed
+# 4     Extra Verbose   Show extra verbose information
+# 5     Debug mode      Everything
+verbose		2
+loglevel	3
+logfile	BACKER_MNT_PATH/rsnapshot.log
+lockfile	BACKER_MNT_PATH/rsnapshot.pid
+du_args	--total --summarize --human-readable
+
+########### rsync opts, below
+link_dest	1
+
+#Original doc:
+# With sync_first enabled, "rsnapshot sync" handles the file sync, and all
+# interval calls simply rotate files. The default is 0 (off).
+#This is critical, as we'll never ask rsnapshot to actually run rsync for us.
+sync_first	1
+
+backup	BACKER_MNT_PATH/	.
