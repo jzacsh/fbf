@@ -1,8 +1,9 @@
-= Backups: Robust, Easy, Multi-homed, FOSS
+= FBDN: Friend Backup Delivery Network
 Jonathan Zacsh
 :grandurl: link:doc/design.adoc
 
-FOSS backup vaporware.
+Backups: Robust, Easy(?), Multi-homed, FOSS. Hot-off-the-press vaporware
+(seriously, look away).
 
 == Status
 
@@ -19,6 +20,9 @@ push-to-server rsnapshot solution, and documenting the experience in
 link:doc/labor.adoc[`labor.adoc`] (<<serverlabor, summary>>).
 
 == (Imagined) FAQ
+Can I use this? What does it do?::
+  Nope, you can't use this. This repo doesn't do much, yet. But I'd love to hear
+  from you if you *have* read on, and you're still interested!
 Why release?? You have nothing to show!::
   Because I was feeling cramped in the massive "private" gist I was developing
   in. Working without directories is hard.
