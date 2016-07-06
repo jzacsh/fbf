@@ -2,7 +2,7 @@
 Jonathan Zacsh <jzacsh@gmail.com>
 v0.12, 2016-05-23
 :resticurl: https://restic.github.io
-:borgbkurl: https://borgbackups.readthedocs.io
+:borgbkurl: https://borgbackup.readthedocs.io
 :mr_hlink: http://www.mikerubel.org/computers/rsync_snapshots/
 :likeahawk: https://wiktionary.org/wiki/watch_like_a_hawk
 :plugpc_or_rapsbPi: https://wikipedia.org/wiki/Plug_computer
