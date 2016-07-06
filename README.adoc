@@ -1,4 +1,4 @@
-= FBDN: Friend Backup Delivery Network
+= FBSN: Friend Backup Snapshotting Network
 Jonathan Zacsh
 :grandurl: link:doc/design.adoc
 
