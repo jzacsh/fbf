@@ -1,6 +1,7 @@
 = FBSN: Friend Backup Snapshotting Network
 Jonathan Zacsh
 :grandurl: link:doc/design.adoc
+:laborurl: link:doc/labor.adoc
 
 Backups: Robust, Easy(?), Multi-homed, FOSS. Hot-off-the-press vaporware
 (seriously, look away).
@@ -17,7 +18,7 @@ etc.)_
 
 *tl;dr* But, hope isn't lost just yet. I'm currently walking through setup of a
 push-to-server rsnapshot solution, and documenting the experience in
-link:doc/labor.adoc[`labor.adoc`] (<<serverlabor, summary>>).
+{laborurl}[`labor.adoc`] (<<serverlabor, summary>>).
 
 == (Imagined) FAQ
 Can I use this? What does it do?::
@@ -30,9 +31,9 @@ What's the tl;dr of your `labor.adoc` progress?::
   Good! I currently have `rsync ./stuff/ host:` automagically snapshotting, so
   my hopes are high! See more in that doc's, "TODO List for `ForceCommand`"
 Bash?::
-  I'll happily port stuff to go, but for now everything is small and I'm fine
-  with it. The aggressive daemon I plan to build will definitely be written in
-  golang from the star. 
+  I'll happily port stuff to golang, but for now everything is small and I'm
+  fine with it. The aggressive daemon I plan to build will definitely be written
+  in golang from the start.
 
 == Backup Infrastructure Goals:
 .Backups...
@@ -82,7 +83,7 @@ usage: `sync_to_mirrors SOURCE_DIR [DEST_DIR_SUFFIX]`
 [[serverlabor]]
 === 2016-07-03: Rsync & Rotation
 Though my end-goal  is as hands-off as possible, I have to start somewhere, so
-I'm link:labor.adoc[documenting all of the *manual* labor involved in setting
+I'm {laborurl}[documenting all of the *manual* labor involved in setting
 up the underlying system]. The setup is what I'd fundamentally like to automate,
 so this documentation effort will help in a few ways:
 
