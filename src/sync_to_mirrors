@@ -189,8 +189,10 @@ numFailed=${#failedHosts[@]}; declare -r numFailed
   exit 1
 }
 
-log 'Succeeded syncing to %s %d mirror%s in %s\n' \
-  "$( [ "$hostCount" -eq 1 ] || echo -n all )" \
+plural() ( if [ "$1" -eq 1 ];then echo -n ' ';else echo -n "$2";fi; )
+
+log 'Succeeded syncing to %s%d mirror%s in %s\n' \
+  "$(plural "$hostCount" all)" \
   $hostCount \
-  "$( [ "$hostCount" -eq 1 ] || echo -n s )" \
+  "$(plural "$hostCount" s)" \
   "$elapsed"
