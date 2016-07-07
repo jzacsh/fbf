@@ -17,6 +17,7 @@ declare -a _rsyncOpts=(
 );
 #################################################
 # utils and such, nothing~ish executed here #####
+startStmp="$(date +%s)"; declare -r startStmp
 rsyncOpts() ( printf -- ' --%s ' "${_rsyncOpts[@]}"; )
 helpHostFile() ( printf '$XDG_CONFIG_HOME/%s' "$hostListName"; )
 helpExcludeFile() ( printf '$XDG_CONFIG_HOME/%s' "$excludeListName"; )
@@ -173,17 +174,23 @@ while read host;do
   fi
 done < <(hostList)
 
+elapsed="$(date -u -d "@$(( $(date +%s) - startStmp ))" +'%-Mm %-Ss')"
+declare -r elapsed
+
 numFailed=${#failedHosts[@]}; declare -r numFailed
 [ $numFailed -eq 0 ] || {
   if [ $numFailed -eq $hostCount ];then
-    err 'ALL %d hosts failed; nothing backed up\n' $numFailed
+    err 'ALL %d hosts failed; nothing backed up. %s elapsed\n' \
+      $numFailed "$elapsed"
   else
-    err 'Some %d hosts failed; only partially backed up\n' $numFailed
+    err 'Some %d hosts failed; only partially backed up. %s elapsed\n' \
+      $numFailed "$elapsed"
   fi
   exit 1
 }
 
-log 'Succeeded syncing to %d mirror%s\n' \
+log 'Succeeded syncing to %s %d mirror%s in %s\n' \
   "$( [ "$hostCount" -eq 1 ] || echo -n all )" \
   $hostCount \
-  "$( [ "$hostCount" -eq 1 ] || echo -n s )"
+  "$( [ "$hostCount" -eq 1 ] || echo -n s )" \
+  "$elapsed"
