@@ -12,6 +12,8 @@ Jonathan Zacsh
 :rrsyncurl: https://download.samba.org/pub/unpacked/rsync/support/rrsync
 :rsshurl: https://manpages.debian.org/cgi-bin/man.cgi?query=rssh&apropos=0&sektion=0&manpath=Debian+unstable+sid&format=html&locale=en
 :logroturl: https://github.com/avian2/pylog2rotate
+:forcecmdsh: link:../src/rsyncrotate-forcedcmd.sh
+:syncmirrorssh: link:../src/sync_to_mirrors
 
 Below is an outline of steps required to get automated, policy-driven,
 incremental, and hopefully encrypted backups footnoteref:[eventual, Eventually
@@ -144,13 +146,12 @@ me@laptop $ ssh mybkupbox
 @mybkupbox $ sudo chmod 744 ~backer/rsyncrotate-forcedcmd.sh
 ----
 <1> Download latest {rrsyncurl}[`rrsync` from the project website]
-<2> Download latest copy of this script
-link:../src/rsyncrotate-forcedcmd.sh[from this repo]. *WARNING*: the values in
-this script are not properly parameterized. This script should be carefully
-checkeand made dynamic to take the specifc values to each use-case of this
-document.
+<2> Download latest copy of this script {forcecmdsh}[from this repo]. *WARNING*:
+the values in this script are not properly parameterized. This script should be
+carefully checkeand made dynamic to take the specifc values to each use-case of
+this document.
 
-=== TODO List for link:../src/rsyncrotate/forcedcmd.sh[`ForceCommand`~ish]
+=== TODO List for {forcecmdsh}[`ForceCommand`~ish]
 . *urgent*: replace `rsnaphot $interval` call w/:
 .. make `forcedcmd.sh` agnostic to snapshotting - factor specific snapshotting
    approach out into another script, this way forcecmd.sh doesn't change,
@@ -223,7 +224,7 @@ FILE FORMAT" section of sshd(8) manual]
 
 == Backing Up, Given User-Accss to Rsync/Snapshotting Host
 
-.TODO explain link:../src/sync_to_mirrors[`sync_to_mirrors` shell script].
+.TODO explain {syncmirrorssh}[`sync_to_mirrors` shell script].
 . *urgent*: add `-m` flag to `sync_to_mirror` to take (m)irror-file
 . *urgent*: add `-e` flag to `sync_to_mirror` to take (e)excludes-file
 
