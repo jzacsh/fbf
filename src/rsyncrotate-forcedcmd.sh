@@ -25,6 +25,8 @@ declare -r sshPrint="$1"
 declare -r requestId="$$"."$sshPrint"
 listConfs() ( find "$tmpfsDir"/ -name '*'"$requestId"'*' -print; )
 
+declare -r pushBaseTemplate="tmp.id-${requestId}.base"
+
 cleanupTemps() ( # non-critical cleanup
   listConfs | while read cf; do
     log 'Removing custom config:\n\t%s\n' "$(rm -v "$cf")"
@@ -34,6 +36,12 @@ cleanupTemps() ( # non-critical cleanup
 isPidFileOurs=0
 catchExit() (
   [ "$isPidFileOurs" -eq 0 ] || echo -n > "$pidFile"
+
+  find "$snapshotRoot" \
+    -type d \
+    -mindepth 1 -maxdepth 1 \
+    -name "${pushBaseTemplate}_*.d" \
+    -exec rm -rfv {} \;
 
   [ "$(listConfs | wc -l)" != 0 ] || return 0
 
@@ -115,8 +123,10 @@ if isPush;then
   if [ -d "$destPath" ];then
     declare -r intervBase="${snapshotRoot}/${lowInterval}."
     tmpCopy="$(
-      mktemp --directory \
-        --tmpdir="$snapshotRoot" "${lowInterval}.base_XXXXXX.d" ||
+      mktemp \
+        --directory \
+        --tmpdir="$snapshotRoot" \
+        "$pushBaseTemplate"_"$lowInterval"-XXXXXXX.d ||
           die 'Failed to mktemp directory to save base copy before rotation\n'
     )"; declare -r tmpCopy
     cp --link --archive ${intervBase}0/. "$tmpCopy" ||

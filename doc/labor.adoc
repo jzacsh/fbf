@@ -151,7 +151,6 @@ checkeand made dynamic to take the specifc values to each use-case of this
 document.
 
 === TODO List for `ForceCommand`
-. *urgent*: cleanup `hourly.base_XXXXX.d` on failure
 . *urgent*: replace `rsnaphot $interval` call w/:
 .. always push into N-intervals on `hour`
 .. *everything* else is a ISO `YYYY-MM-DDTHH.MM.SS.UTC` *daily* snapshot +
