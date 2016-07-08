@@ -152,6 +152,13 @@ document.
 
 === TODO List for link:../src/rsyncrotate/forcedcmd.sh[`ForceCommand`~ish]
 . *urgent*: replace `rsnaphot $interval` call w/:
+.. make `forcedcmd.sh` agnostic to snapshotting - factor specific snapshotting
+   approach out into another script, this way forcecmd.sh doesn't change,
+   instead either:
+... takes script as argument
+... reads expected snapshot scrpt from yaml +
+    _(mentioned in another TODO somewhere)_
+... expected snashot script to be some hardcoded-named sibling script
 .. always push into N-intervals on `hour`
 .. *everything* else is a ISO `YYYY-MM-DDTHH.MM.SS.UTC` *daily* snapshot +
     (ie: snapshots are *unique* at top-level for their `DD` value)
