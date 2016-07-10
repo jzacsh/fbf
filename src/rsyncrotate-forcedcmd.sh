@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-declare -r mntRoot=/mnt/backuphdds/terraspin
-declare -r tmpfsDir=~backer/tmp.backerconfs
-declare -r baseConf=~backer/rsnapshot.conf.template
-declare -r rrsyncExec=~backer/rrsync
+declare -r bkUpConf="$1"
 
 #############################################################
 # Local helpers, nothing run here... ########################
@@ -58,6 +55,33 @@ trap catchExit EXIT
 [ "${SSH_ORIGINAL_COMMAND/rsync\ --server/}" != "$SSH_ORIGINAL_COMMAND" ] ||
    die 'Only rsync to --server is allowed\n'
 
+{ [ -n "${bkUpConf/ */}" ] && [ -f "$bkUpConf" ] && [ -r "$bkUpConf" ]; } ||
+  die 'Backup config path is not a readable file:\n\t"%s"\n' "$bkUpConf"
+
+i=1; while read line; do
+  dbg 'Parsing line %02d\n\t"%s"\n' $i "$line"
+  key="${line/=*}"
+  [ -n "${key/ */}" ] || die 'Bad assignment on line %02d:\n\t"%s"\n' $i "$line"
+  case "$key" in
+    TARGET_PARENT|TMPFS_DIR|BASE_CONF|RRSYNC_EXEC)
+      eval "$line"
+      ;;
+    *)
+      die \
+        'Parsing; unrecognized key, "%s" found on line %02d:\n\t"%s"\n' \
+        "$key" $i "$line"
+      ;;
+  esac
+  i=$(( i + 1 ))
+done < <(grep --invert-match --extended-regexp '^(#|[[:space:]]*$)' "$bkUpConf")
+asrtParsed() (
+  local keyStr="$1"
+  local key="${!keyStr}"
+  [ -n "${key/ */}" ] ||
+    die 'Failed to parse non-empty value for key "%s"\n' "$key"
+)
+for k in TARGET_PARENT TMPFS_DIR BASE_CONF RRSYNC_EXEC;do asrtParsed "$k"; done
+
 lowInterval="$(
   grep --color=none --extended-regexp '^retain\t*' "$baseConf" |
     sed --expression 's|^retain\t*||g' |
@@ -69,10 +93,10 @@ declare -r lowInterval
 [ -x "$rrsyncExec" ] || die \
   'Cannot run without restricted rsync exec, expected:\n\t%s\n' "$rrsyncExec"
 
-isWriteableDir "$mntRoot" ||
-  die 'writeable drive not available:\n\t%s\n' "$mntRoot"
+isWriteableDir "$TARGET_PARENT" ||
+  die 'writeable drive not available:\n\t%s\n' "$TARGET_PARENT"
 
-declare -r snapshotRoot="$mntRoot"/auto-"$sshPrint"/
+declare -r snapshotRoot="$TARGET_PARENT"/auto-"$sshPrint"/
 mkdir --verbose --parents "$snapshotRoot" >&2 ||
   die 'could not start snapshot root at:\n\t%s\n' "$snapshotRoot"
 
