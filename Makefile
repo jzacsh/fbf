@@ -1,5 +1,5 @@
 BIN_DIR     =  bin
-TEST_OPTS  :=  --tap
+TEST_OPTS  := # --tap
 
 # Documentation
 MARKDN_EXT  =  adoc
