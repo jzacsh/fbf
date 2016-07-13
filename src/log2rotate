@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+var path = require('path');
+
+// Adapted from a python fork of the original Haskell jekor.com/log2rotate
+// https://github.com/avian2/pylog2rotate/blob/7a819f6e295/log2rotate.py#L6-12
+function log2nFilter(n, keep) {
+  if (n < 1) { return; }
+  keep[Math.floor(n)] = true;
+  if (n == 1) { return; }
+  log2nFilter(n - Math.pow(2, (Math.log2(n) - 1)), keep);
+}
+
+/**
+ * @param {!Array.<?>} whole
+ * @return {!Array.<?>} subset of whole
+ */
+function log2n(whole) {
+  subsetIndices = {};
+  log2nFilter(whole.length, subsetIndices)
+  return Object.
+    keys(subsetIndices).
+    map(function(idx) {
+      return whole[parseInt(idx - 1, 10)];
+    });
+}
+
+function die(exitCode, opt_err) {
+  console.error(`%susage: %s [-h|--help] ARG [... ARG_N]
+    Trims list of arguments down to just its exponential series.
+    Probably easier to just read the code (3 lines) then to explain.
+  `, opt_err || '', path.basename(process.argv[1]));
+  process.exit(exitCode);
+}
+
+var argv = process.argv.slice(2);
+if (!argv.length) { die(1, 'USAGE ERROR: missing arguments to filter\n'); }
+if (argv[0] == '-h' || argv[0] == '--help') { die(0); }
+if (argv[0] == '--') { argv.shift(); } // allows --help to be passed in
+
+log2n(argv).forEach(function(keep) { console.log('%s', keep); });
