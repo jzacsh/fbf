@@ -54,6 +54,6 @@ done
 mkdir -p "$tmpDir/mktmp"
 
 # Execute all bats unit tests
-SRC_DIR="$(dirname "$specDir")" \
+SRC_DIR="$(dirname "$specDir")/src/" \
   TMPDIR="$tmpDir/mktmp" \
   "$batsExec" $@ $bats_target
