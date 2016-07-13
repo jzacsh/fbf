@@ -61,3 +61,13 @@ setup() {
   [ "${lines[ 9]}" = '2016-06-04T13:05' ]
   [ "${lines[10]}" = '2016-05-01T00:05' ] # snaps to only *fewer* older
 }
+
+@test 'should treat lines by order presented, not semantics of their content' {
+  run "$target" $(printf ' %s ' $(mockBackupList | shuf))
+  [ "$status" -eq 0 ]
+
+  # output should not be semantically sorted
+  ! diff -u \
+    <(printf '%s\n' "${lines[@]}") \
+    <(printf '%s\n' "${lines[@]}" | sort --reverse)
+}
