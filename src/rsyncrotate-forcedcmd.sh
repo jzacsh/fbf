@@ -126,6 +126,14 @@ if isPush;then
   log 'Interpreting this as a PUSH, appending $interval, "%s"\n' \
     "$lowInterval"
   declare -r destPath="${snapshotRoot}/${lowInterval}.0"/
+
+  # TODO run logrotate on rsnapshot.log (read from logrotate.conf)
+  #  declare -r logrotateState="$snapshotRoot"/logrotate.state
+  #  logrotate --state "$logrotateState"
+  #  cat > "${TMPFS_DIR}/${requestId}-logrotate.conf" <<-EOF_LOGROTATECONF
+  #    include "$logrotateState"
+  #    "$snapshotRoot" { }
+  #  EOF_LOGROTATECONF
 else
   log 'Interpretting this as a PULL, not appending $interval\n'
   declare -r destPath="$snapshotRoot"
