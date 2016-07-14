@@ -58,6 +58,8 @@ trap catchExit EXIT
 { [ -n "${bkUpConf/ */}" ] && [ -f "$bkUpConf" ] && [ -r "$bkUpConf" ]; } ||
   die 'Backup config path is not a readable file:\n\t"%s"\n' "$bkUpConf"
 
+# TODO: lowercase all of these, and do not use `eval`, just use simple
+# whitespace-separated key/value lines
 i=1; while read line; do
   dbg 'Parsing line %02d\n\t"%s"\n' $i "$line"
   key="${line/=*}"
