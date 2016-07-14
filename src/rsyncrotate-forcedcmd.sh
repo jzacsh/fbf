@@ -85,7 +85,7 @@ for k in TARGET_PARENT TMPFS_DIR BASE_CONF RRSYNC_EXEC;do asrtParsed "$k"; done
 lowInterval="$(
   grep --color=none --extended-regexp '^retain\t*' "$baseConf" |
     sed --expression 's|^retain\t*||g' |
-    sed --expression 's|\t*[[:digit:]]$||g' |
+    sed --expression 's|\t*[[:digit:]]*$||g' |
     head --lines 1
 )" || die 'could not scrape smallest interval from\n\t"%s"\n' "$baseConf"
 declare -r lowInterval
