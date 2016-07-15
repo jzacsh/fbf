@@ -1,9 +1,14 @@
 #!/usr/bin/env bats
 
-setup() (
-  vagrant status | grep -E 'default[[:space:]]*running' >/dev/null 2>&1 ||
-    echo 'Have you run `vagrant up`?' >&2
-)
+# re-apply simple `vagrant status` grep once resolution one:
+# https://github.com/sstephenson/bats/issues/175
+#
+# {
+#   vagrant status | grep -E 'default[[:space:]]*running' >/dev/null 2>&1 || {
+#     echo 'Have you run `vagrant up`?' >&2
+#     exit 1
+#   }
+# } &
 
 rsync() (
   vagrant ssh-config > "$TMPDIR"/ssh.config
