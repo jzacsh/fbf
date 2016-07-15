@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 targetSh="$SRC_DIR"/rsyncrotate-forcedcmd.sh; declare -r targetSh
+fakeSshFprint=63e5ae042d29b7104dff26d13c546e12; declare -r fakeSshFprint
 
 # re-apply simple `vagrant status` grep once resolution one:
 # https://github.com/sstephenson/bats/issues/175
@@ -38,9 +39,40 @@ stampLess() (
   [ "$(stampLess)" = 'ERROR: Usage: Expected SSH finger print and backup config path' ]
 }
 
-@test 'should insist on non-empty config file argument' { skip; }
-@test 'should insist on regular config file' { skip; }
-@test 'should insist on readable config file' { skip; }
+@test 'should insist on non-empty config file argument' {
+  run "$targetSh" "$fakeSshFprint"
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(stampLess)" = 'ERROR: Usage: Expected SSH finger print and backup config path' ]
+
+  someWhiteSpace="$(printf ' \t ')"
+  run "$targetSh" "$fakeSshFprint" "$someWhiteSpace"
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [ "$(stampLess 0)" = 'ERROR: Backup config path is not a readable file:' ]
+  [ "${lines[1]}" = "$(printf '\t"%s"' "$someWhiteSpace")" ]
+}
+
+@test 'should insist on regular config file' {
+  run "$targetSh" "$fakeSshFprint" /dev/null
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [ "$(stampLess 0)" = 'ERROR: Backup config path is not a readable file:' ]
+  [ "${lines[1]}" = "$(printf '\t"/dev/null"')" ]
+}
+
+@test 'should insist on readable config file' {
+  unreadableConf="$TMPDIR"/notreadable
+  echo boop > "$unreadableConf"
+  chmod u-r "$unreadableConf"
+  ! [ "$unreadableConf" ]
+
+  run "$targetSh" "$fakeSshFprint" "$unreadableConf"
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 2 ]
+  [ "$(stampLess 0)" = 'ERROR: Backup config path is not a readable file:' ]
+  [ "${lines[1]}" = "$(printf '\t"%s"' "$unreadableConf")" ]
+}
 
 @test 'should die if empty $SSH_ORIGINAL_COMMAND' { skip; }
 @test 'should die if $SSH_ORIGINAL_COMMAND not rsync --server' { skip; }
