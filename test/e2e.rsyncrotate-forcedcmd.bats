@@ -89,7 +89,7 @@ stampLess() (
 @test 'should require successful sed of rsnapshot conf' { skip; }
 
 @test 'should not rotate snapshots when pulling' { skip; }
-@test 'should not rotate snapshots when listin' { skip; }
+@test 'should not rotate snapshots when listing' { skip; }
 
 # TODO write tests for `if isPush` block of logic
 
