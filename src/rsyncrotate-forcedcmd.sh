@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-declare -r bkUpConf="$1"
+declare -r sshPrint="$1"
+declare -r bkUpConf="$2"
 
 #############################################################
 # Local helpers, nothing run here... ########################
@@ -15,7 +16,6 @@ log() ( local msg="$1"; shift; _log INFO  "$msg" "$@"; )
 isWriteableDir() ( { [ -w "$1" ] && [ -d "$1" ]; } )
 isPush() ( [ "${SSH_ORIGINAL_COMMAND/--sender/}" = "$SSH_ORIGINAL_COMMAND" ]; )
 
-declare -r sshPrint="$1"
 [ -n "${sshPrint/ */}" ] ||
   die 'Bug: bad .ssh/authorized_keys\nrequire fingerprint as first arg!\n'
 
