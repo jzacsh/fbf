@@ -1,5 +1,7 @@
 #!/usr/bin/env bats
 
+targetSh="$SRC_DIR"/rsyncrotate-forcedcmd.sh; declare -r targetSh
+
 # re-apply simple `vagrant status` grep once resolution one:
 # https://github.com/sstephenson/bats/issues/175
 #
@@ -10,13 +12,31 @@
 #   }
 # } &
 
+# TODO fail if < bashv4
+
 rsync() (
   vagrant ssh-config > "$TMPDIR"/ssh.config
   rsync -e "ssh -F "$TMPDIR"/ssh.config" $@
 )
 
-@test 'should refuse to run without ssh-fprint' { skip; }
-@test 'should refuse to run with whitespace ssh-fprint' { skip; }
+stampLess() (
+  local row="${1:-0}"; local ln="${lines[$row]}";
+  echo "${ln/*][[:space:]]/}"
+)
+
+@test 'should refuse to run without ssh-fprint' {
+  run "$targetSh"
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(stampLess)" = 'ERROR: Usage: Expected SSH finger print and backup config path' ]
+}
+
+@test 'should refuse to run with whitespace ssh-fprint' {
+  run "$targetSh" "$(printf ' \t ')"
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(stampLess)" = 'ERROR: Usage: Expected SSH finger print and backup config path' ]
+}
 
 @test 'should insist on non-emptyl config file argument' { skip; }
 @test 'should insist on regular config file' { skip; }

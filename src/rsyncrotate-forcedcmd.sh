@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-declare -r sshPrint="$1"
-declare -r bkUpConf="$2"
-
 #############################################################
 # Local helpers, nothing run here... ########################
 _log() ( # logs *must* go to stder, otherwise rsync gets confused
@@ -16,8 +13,15 @@ log() ( local msg="$1"; shift; _log INFO  "$msg" "$@"; )
 isWriteableDir() ( { [ -w "$1" ] && [ -d "$1" ]; } )
 isPush() ( [ "${SSH_ORIGINAL_COMMAND/--sender/}" = "$SSH_ORIGINAL_COMMAND" ]; )
 
+(( $# == 2 )) || die 'Usage: Expected SSH finger print and backup config path\n'
+
+declare -r sshPrint="$1"
 [ -n "${sshPrint/ */}" ] ||
   die 'Bug: bad .ssh/authorized_keys\nrequire fingerprint as first arg!\n'
+
+declare -r bkUpConf="$2"
+{ [ -n "${bkUpConf/ */}" ] && [ -f "$bkUpConf" ] && [ -r "$bkUpConf" ]; } ||
+  die 'Backup config path is not a readable file:\n\t"%s"\n' "$bkUpConf"
 
 declare -r requestId="$$"."$sshPrint"
 listConfs() ( find "$tmpfsDir"/ -name '*'"$requestId"'*' -print; )
@@ -49,14 +53,12 @@ trap catchExit EXIT
 
 #############################################################
 # Start setup and sanity checks #############################
+
 [ -n "${SSH_ORIGINAL_COMMAND/ *}" ] ||
    die 'Login not allowed; found empty $SSH_ORIGINAL_COMMAND\n'
 
 [ "${SSH_ORIGINAL_COMMAND/rsync\ --server/}" != "$SSH_ORIGINAL_COMMAND" ] ||
    die 'Only rsync to --server is allowed\n'
-
-{ [ -n "${bkUpConf/ */}" ] && [ -f "$bkUpConf" ] && [ -r "$bkUpConf" ]; } ||
-  die 'Backup config path is not a readable file:\n\t"%s"\n' "$bkUpConf"
 
 # TODO: lowercase all of these, and do not use `eval`, just use simple
 # whitespace-separated key/value lines
