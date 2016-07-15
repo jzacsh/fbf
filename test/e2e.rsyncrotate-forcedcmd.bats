@@ -83,7 +83,14 @@ stampLess() (
   [ "$(stampLess)" = 'ERROR: Login not allowed; found empty $SSH_ORIGINAL_COMMAND' ]
 }
 
-@test 'should die if $SSH_ORIGINAL_COMMAND not rsync --server' { skip; }
+@test 'should die if $SSH_ORIGINAL_COMMAND not rsync --server' {
+  echo boop > "$TMPDIR"/testBackupConf
+  SSH_ORIGINAL_COMMAND=hackyouservers \
+    run "$targetSh" "$fakeSshFprint" "$TMPDIR"/testBackupConf
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(stampLess)" = 'ERROR: Only rsync to --server is allowed' ]
+}
 
 @test 'should require conf providing TARGET_PARENT' { skip; }
 @test 'should require conf providing TMPFS_DIR' { skip; }
