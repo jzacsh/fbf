@@ -59,7 +59,7 @@ setup() {
   [ "${lines[ 7]}" = '2016-06-30T10:05' ]
   [ "${lines[ 8]}" = '2016-06-21T19:05' ]
   [ "${lines[ 9]}" = '2016-06-04T13:05' ]
-  [ "${lines[10]}" = '2016-05-01T00:05' ] # snaps to only *fewer* older
+  [ "${lines[10]}" = '2016-05-01T00:05' ] # ... to only *fewer* older
 }
 
 @test 'should treat lines by order presented, not semantics of their content' {
