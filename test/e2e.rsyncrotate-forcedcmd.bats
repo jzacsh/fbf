@@ -74,7 +74,15 @@ stampLess() (
   [ "${lines[1]}" = "$(printf '\t"%s"' "$unreadableConf")" ]
 }
 
-@test 'should die if empty $SSH_ORIGINAL_COMMAND' { skip; }
+@test 'should die if empty $SSH_ORIGINAL_COMMAND' {
+  echo boop > "$TMPDIR"/testBackupConf
+  [ -z "${SSH_ORIGINAL_COMMAND/ *}" ]
+  run "$targetSh" "$fakeSshFprint" "$TMPDIR"/testBackupConf
+  [ "$status" -ne 0 ]
+  [ "${#lines[@]}" -eq 1 ]
+  [ "$(stampLess)" = 'ERROR: Login not allowed; found empty $SSH_ORIGINAL_COMMAND' ]
+}
+
 @test 'should die if $SSH_ORIGINAL_COMMAND not rsync --server' { skip; }
 
 @test 'should require conf providing TARGET_PARENT' { skip; }

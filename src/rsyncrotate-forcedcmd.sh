@@ -12,6 +12,7 @@ wrn() ( local msg="$1"; shift; _log WARN  "$msg" "$@"; )
 log() ( local msg="$1"; shift; _log INFO  "$msg" "$@"; )
 isWriteableDir() ( { [ -w "$1" ] && [ -d "$1" ]; } )
 isPush() ( [ "${SSH_ORIGINAL_COMMAND/--sender/}" = "$SSH_ORIGINAL_COMMAND" ]; )
+isSetNonEmpty() ( declare -p "$1" >/dev/null 2>&1 && [ -n "${!1/ *}" ]; )
 
 (( $# == 2 )) || die 'Usage: Expected SSH finger print and backup config path\n'
 
@@ -38,13 +39,15 @@ isPidFileOurs=0
 catchExit() (
   [ "$isPidFileOurs" -eq 0 ] || echo -n > "$pidFile"
 
-  find "$snapshotRoot" \
-    -type d \
-    -mindepth 1 -maxdepth 1 \
-    -name "${pushBaseTemplate}_*.d" \
-    -exec rm -rfv {} \;
+  if isSetNonEmpty snapshotRoot;then
+    find "$snapshotRoot" \
+      -type d \
+      -mindepth 1 -maxdepth 1 \
+      -name "${pushBaseTemplate}_*.d" \
+      -exec rm -rfv {} \;
+  fi
 
-  [ "$(listConfs | wc -l)" != 0 ] || return 0
+  { isSetNonEmpty tmpfsDir && [ "$(listConfs | wc -l)" != 0 ]; } || return 0
 
   wrn 'Caught dirty EXIT, cleaning up...\n'
   cleanupTemps
@@ -54,7 +57,7 @@ trap catchExit EXIT
 #############################################################
 # Start setup and sanity checks #############################
 
-[ -n "${SSH_ORIGINAL_COMMAND/ *}" ] ||
+isSetNonEmpty SSH_ORIGINAL_COMMAND ||
    die 'Login not allowed; found empty $SSH_ORIGINAL_COMMAND\n'
 
 [ "${SSH_ORIGINAL_COMMAND/rsync\ --server/}" != "$SSH_ORIGINAL_COMMAND" ] ||
