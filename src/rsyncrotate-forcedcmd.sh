@@ -25,12 +25,12 @@ declare -r bkUpConf="$2"
   die 'Backup config path is not a readable file:\n\t"%s"\n' "$bkUpConf"
 
 declare -r requestId="$$"."$sshPrint"
-listConfs() ( find "$tmpfsDir"/ -name '*'"$requestId"'*' -print; )
+listTmpConfs() ( find "$tmpfsDir"/ -name '*'"$requestId"'*' -print; )
 
 declare -r pushBaseTemplate="tmp.id-${requestId}.base"
 
 cleanupTemps() ( # non-critical cleanup
-  listConfs | while read cf; do
+  listTmpConfs | while read cf; do
     log 'Removing custom config:\n\t%s\n' "$(rm -v "$cf")"
   done
 )
@@ -47,7 +47,7 @@ catchExit() (
       -exec rm -rfv {} \;
   fi
 
-  { isSetNonEmpty tmpfsDir && [ "$(listConfs | wc -l)" != 0 ]; } || return 0
+  { isSetNonEmpty tmpfsDir && [ "$(listTmpConfs | wc -l)" != 0 ]; } || return 0
 
   wrn 'Caught dirty EXIT, cleaning up...\n'
   cleanupTemps
