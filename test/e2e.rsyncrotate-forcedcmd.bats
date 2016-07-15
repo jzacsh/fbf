@@ -38,7 +38,7 @@ stampLess() (
   [ "$(stampLess)" = 'ERROR: Usage: Expected SSH finger print and backup config path' ]
 }
 
-@test 'should insist on non-emptyl config file argument' { skip; }
+@test 'should insist on non-empty config file argument' { skip; }
 @test 'should insist on regular config file' { skip; }
 @test 'should insist on readable config file' { skip; }
 
