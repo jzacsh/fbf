@@ -2,6 +2,8 @@
 Jonathan Zacsh
 :grandurl: link:doc/design.adoc
 :laborurl: link:doc/labor.adoc
+:O: pass:normal[ {nbsp} ]
+:D: pass:normal[ &#10004; ]
 
 Backups: Robust, Easy(?), Multi-homed, FOSS. Hot-off-the-press vaporware
 (seriously, look away).
