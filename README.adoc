@@ -1,5 +1,6 @@
 = FBSN: Friend Backup Snapshotting Network
-Jonathan Zacsh
+v0.1 2016-07-31
+Jonathan Zacsh, <jzacsh@gmail.com>
 :grandurl: link:doc/design.adoc
 :laborurl: link:doc/labor.adoc
 :O: pass:normal[ {nbsp} ]
