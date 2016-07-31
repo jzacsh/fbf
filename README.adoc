@@ -84,7 +84,7 @@ usage: `sync_to_mirrors SOURCE_DIR [DEST_DIR_SUFFIX]`
 ----
 
 [[serverlabor]]
-=== 2016-07-03: Rsync & Rotation
+=== 2016-07-03: Rsync & Rotation - `doc/labor.adoc`
 Though my end-goal  is as hands-off as possible, I have to start somewhere, so
 I'm {laborurl}[documenting all of the *manual* labor involved in setting
 up the underlying system]. The setup is what I'd fundamentally like to automate,
