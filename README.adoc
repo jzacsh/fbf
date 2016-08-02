@@ -3,6 +3,8 @@ v0.1 2016-07-31
 Jonathan Zacsh, <jzacsh@gmail.com>
 :grandurl: link:doc/design.adoc
 :laborurl: link:doc/labor.adoc
+:log2rotate: link:src/log2rotate
+:daemonflow: link:doc/remotedrivedaemon.adoc
 :O: pass:normal[ {nbsp} ]
 :D: pass:normal[ &#10004; ]
 
@@ -11,17 +13,52 @@ Backups: Robust, Easy(?), Multi-homed, FOSS. Hot-off-the-press vaporware
 
 == Status
 
-I'm currently not achieving any of my {grandurl}[lofty goals]. In one sentence,
-I imagined friends/family sending each other hard drives with public keys in
-their root, and no one having to touch any config to keep things running _(ie: I
-particularly wanted *non*-programmer friends to feel empowered to host!)_
-Unfortunately, I haven't reached the parts I even find interesting in this goal
-yet _(auto-detection of keys, auto-configuration, multi-homed for the masses,
-etc.)_
+I'm currently not achieving any of my {grandurl}[lofty goals], so if you're
+hoping for a useable program to run, avert your eyes.
 
-*tl;dr* But, hope isn't lost just yet. I'm currently walking through setup of a
-push-to-server rsnapshot solution, and documenting the experience in
-{laborurl}[`labor.adoc`] (<<serverlabor, summary>>).
+However, you may find this useful at least as documentation, for the moment: a
+collection of how-tos, surrounding a single goal. That goal, in a one run-on
+sentence:
+
+.End-Use Vision
+[[enduse]]
+____
+Friends/family mail each high-capacity thumbdrives, w/their public keys in `/`
+directory, and with no further configuration: backup services added/removed by
+plugging/unplugging said drive. I particularly want *non*-programmer friends
+feeling empowered to host!
+____
+
+Though, I haven't reached the parts I truly find interesting in this goal -
+_auto-detection of keys, auto-configuration, etc._ - I just finished working
+through {laborurl}[tediously documenting] all of the details in setting up an
+auto-snapshotting rsync receptical.
+
+=== tl;dr
+Currently at documentation/research stages. Peer into my notes, on a
+push-to-server rsnapshot solution {laborurl}[`labor.adoc`] (<<serverlabor,
+summary>>), and feel free to ping me on #freenode (jzaksh@)
+
+=== Roadmap
+To get to my <<enduse, envisioned use-case>>, I'm roughly following these steps:
+
+- {D} get feedback and {grandurl}[roughly outline a high-level design]
+- {D} Installer: {laborurl}[setup/document single-user backup]:
+      rsync, snapshotting, plug PC-config, etc. +
+      -- _As of 2016-07-15, have been backing up automatically_
+
+- {O} *current*: Installer: use said doc to automate single-user setup +
+      -- _As of 2016-07-31, enlisted someone to host 2nd setup remote to me_
+
+- {O} replace rsnapshot w/configurable-length {log2rotate}[`src/log2rotate`]
+- {D} Daemon: {daemonflow}[rough implementation sketch] of automating HDD confs
+- {O} Daemon: v0 implementatino of auto-management
+- {O} Daemon: API to allow single-user to manage their drive/settings remotely
+- {O} Daemon: Exclude repo's key from rsync _(maybe default, probably user
+  configurable)_
+  footnoteref:[repokey, Both borgbackup and restic maintain a
+  passphrase-protected private key side-by-side with their repo contents which
+  currently gets synced to server]
 
 == (Imagined) FAQ
 Can I use this? What does it do?::

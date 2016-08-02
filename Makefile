@@ -17,6 +17,7 @@ test:
 	@echo 'OOOH FKK, no test yet!'
 	@false
 
+# TODO compile README in this recipe
 doc: $(DOCS_MRKUP)
 $(DOCS_DIR)/%: $(DOCS_DIR)/%.$(MARKUP_EXT)
 $(DOCS_DIR)/%.$(MARKUP_EXT): $(DOCS_DIR)/%.$(MARKDN_EXT)

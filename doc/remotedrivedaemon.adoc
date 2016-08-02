@@ -1,0 +1,67 @@
+= Rough Sketch of Daemon Managing Remote Drives
+Jonathan Zacsh
+
+This is a rough implementation sketch of what a daemon's state machine might
+look like to manage machine changes as hard drives are plugged/unpluged from a
+system.
+
+....
+   |
+   |
+   v
++----------+ <----------------------------------------------------+
+| inactive | <-------------------------------------------+        |
++----------+                                             |        |
+   |                                                     |        |
+   |                                                     |        |
+   | udev event,                                         |        |
+   | monotonic job,                                      |        |
+   | SSHD restart (not self-triggered)                   |        |
+   | onboot                                              |        |
+   |                                                     |        |
+   |                                                     |        |
+   v                                                     |        | OK
++-------+  end of list           +-----------+           |        |
+| list  |----------------------->| sort key  |           |   +--------------+
+| disks |<-----------------+     |  queue    |           |   | restart sshd |
+|       |-----------+      |     +-----+-----+           |   +--------------+
++-------+           |      |           |                 |         ^
+ ^ ^ ^              |      |           | sorted          |         |
+ | | |         next |      |           |                 |         | OK
+ | | |    candidate |      |   +-----------------+       |         |
+ | | |              v      |   |   compare to    |-------+   +------------+
+ | | |    +----------+     |   |    on disk      |  same     | flush auth |
+ | | +----| validate |     |   | authorized_keys |           |   keys to  |
+ | |   NO |  disk    |     |   +-----------------+           |    disk    |
+ | |      +----------+     |                   |             +------------+
+ | |             |         |                   |               ^
+ | |             | valid   |                   |               |
+ | |             |         | eof          diff |     +---------+
+ | |             v         | list              |     | EOF list
+ | |      +-----------------+                  v     |               +--------+
+ | |      | list partitions |              +-----------+         OK  | umount | err
+ | |      +-----------------+              | list diff |<------------|  auto  |---> ?
+ | |             |                         |   lines   |<---------+  |  path  |
+ | |             | next                    +-----------+     same |  +--------+
+ | |             v                           ^  ^   |             |         ^
+ | |         +-------------+                 |  |   |             |         | removed
+ | +---------|  check for  |                 |  |   |             |         |
+ |  no magic | magic files |                 |  |   | next line  +------------+
+ |           +-------------+                 |  |   +----------->| check line |
+ |               |                           |  |                |    type    |
+ |               | pubkey                    |  |                +------------+
+ |               | found                     |  |                           |
+ |               v                           |  |                           | added
+ |         +-----------------+               |  |                           |
+ |     OK  |  add to queue   |               |  |                           v
+ +---------|      for        |               |  |                    +-----------+
+           | authorized_keys |               |  |                OK  |    mkdir  |
+           +-----------------+               |  +--------------------| auto path |
+                                             |                       |  & mount  |
+                                             |     +------------+    +-----------+
+                                             |     | notify via |        |
+                                             +-----|  queue to  |        | err
+                                                OK |  show errs |<-------+
+                                                   +------------+
+
+....
