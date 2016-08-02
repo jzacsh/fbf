@@ -112,15 +112,27 @@ Bash?::
 
 [source, sh]
 ----
-$ ./sync_to_mirrors -h
-usage: `sync_to_mirrors SOURCE_DIR [DEST_DIR_SUFFIX]`
+$ ./src/sync_to_mirrors -h
+Usage:  `sync_to_mirrors -[dhnq] [-m FILE] SOURCE_DIR [RSYNC_ARGS...]`
 
-  Runs rsync from SOURCE_DIR to each host in "$XDG_CONFIG_HOME/backupto.hosts";
+ Runs rsync from SOURCE_DIR to each host in
+   $XDG_CONFIG_HOME/sync_to_mirrors.hosts
+   Note: file path can be overriden with -m flag.
 
-  Uses rsync(1) flags:
+ Summary:
+  Optionally passes any remaining RSYNC_ARGS as-is to rsync.
+  Defaults to using the following rsync(1) flags (disabled with -d flag):
      --verbose  --recursive  --delete  --archive  --acls  --xattrs
 
-  Optionally: list rsync(1) excludes, one per line in "$XDG_CONFIG_HOME/backupto.excludes"
+  Excludes for rsync(1) maybe listed, one-per-line in:
+    $XDG_CONFIG_HOME/sync_to_mirrors.excludes
+
+ Optional flags:
+    -d    no defaults: don't pass default flags to rsync.
+    -h    help - this document.
+    -m    FILE: provide mirrors, ignoring $XDG_CONFIG_HOME/sync_to_mirrors.hosts.
+    -n    noop mode: clean run - ie: only print, don't actually do anything.
+    -q    quiet mode: no stdout - ie: only log errors and warnings to stderr.
 ----
 
 [[serverlabor]]
