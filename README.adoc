@@ -78,7 +78,7 @@ Bash?::
 == Backup Infrastructure Goals:
 .Backups...
 . I can trust run well
-  footnoteref:[trust, By "trust" I mean designed once and only once] 
+  footnoteref:[trust, By "trust" I mean designed once and only once]
 . I don't have to think about
   footnoteref:[debug, Called "debuggability" in other notes]
 . Mirror a professional solution I could imagine paying others to maintain
