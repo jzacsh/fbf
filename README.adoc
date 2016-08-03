@@ -1,5 +1,5 @@
-= FBSN: Friend Backup Snapshotting Network
-v0.1 2016-07-31
+= FBF: Friends Backup Friends
+v0.1 2016-08-03
 Jonathan Zacsh, <jzacsh@gmail.com>
 :grandurl: link:doc/design.adoc
 :laborurl: link:doc/labor.adoc
@@ -9,8 +9,7 @@ Jonathan Zacsh, <jzacsh@gmail.com>
 :O: pass:normal[ {nbsp} ]
 :D: pass:normal[ &#10004; ]
 
-Backups: Robust, Easy(?), Multi-homed, FOSS. Hot-off-the-press vaporware
-(seriously, look away).
+_"FBF - backups for BFFs"_: flexible, decentralized backups.
 
 == Status
 
