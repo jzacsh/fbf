@@ -68,4 +68,23 @@ Vagrant.configure("2") do |config|
   #   apt-get update
   #   apt-get install -y apache2
   # SHELL
+
+
+  #
+  # Machines involved in testing
+  #
+
+  # Client machine: source of data being backed up. Uploads encrypted backups
+  config.vm.define :client do |client|
+    client.vm.box = "debian/contrib-jessie64"
+    client.vm.network :private_network, ip: "10.0.0.10"
+    client.vm.hostname = "client"
+  end
+
+  # Receptacle machine: receipient of data being backed up. Recieves encrypted backups
+  config.vm.define :receptacle do |receptacle|
+    receptacle.vm.box = "debian/contrib-jessie64"
+    receptacle.vm.network :private_network, ip: "10.0.0.12"
+    receptacle.vm.hostname = "receptacle"
+  end
 end
