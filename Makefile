@@ -2,11 +2,11 @@ BIN_DIR     =  bin
 TEST_OPTS  := # --tap
 
 # Documentation
-MARKDN_EXT  =  adoc
-MARKUP_EXT  =  auto.html
+MRKDN_EXT   =  adoc
+MRKUP_EXT   =  auto.html
 DOCS_DIR    =  doc
-DOCS_MRKDN  =  $(wildcard $(DOCS_DIR)/*.$(MARKDN_EXT))
-DOCS_MRKUP  =  $(DOCS_MRKDN:.$(MARKDN_EXT)=.$(MARKUP_EXT))
+DOCS_MRKDN :=  $(wildcard *.$(MRKDN_EXT) $(DOCS_DIR)/*.$(MRKDN_EXT))
+DOCS_MRKUP :=  $(patsubst %.$(MRKDN_EXT),%.$(MRKUP_EXT),$(DOCS_MRKDN))
 
 all: clean doc test e2e
 
@@ -17,13 +17,15 @@ test:
 	@echo 'OOOH FKK, no test yet!'
 	@false
 
-# TODO compile README in this recipe
 doc: $(DOCS_MRKUP)
-$(DOCS_DIR)/%: $(DOCS_DIR)/%.$(MARKUP_EXT)
-$(DOCS_DIR)/%.$(MARKUP_EXT): $(DOCS_DIR)/%.$(MARKDN_EXT)
+%: %.$(MRKUP_EXT)
+%.$(MRKUP_EXT): %.$(MRKDN_EXT)
+	asciidoc --out-file $@ $<
+$(DOCS_DIR)/%: $(DOCS_DIR)/%.$(MRKUP_EXT)
+$(DOCS_DIR)/%.$(MRKUP_EXT): $(DOCS_DIR)/%.$(MRKDN_EXT)
 	asciidoc --out-file $@ $<
 
 clean:
-	$(RM) $(DOCS_DIR)/*.$(MARKUP_EXT)
+	$(RM) $(DOCS_MRKUP)
 
 .PHONY: clean all test e2e
