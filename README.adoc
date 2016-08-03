@@ -23,7 +23,7 @@ sentence:
 .End-Use Vision
 [[enduse]]
 ____
-Friends/family mail each high-capacity thumbdrives (w/public keys at `/`) and
+Friends/family mail each high-capacity thumbdrives (w/public key at `/`) and
 with no further configuration: a backup service is *added/removed* by
 *plugging/unplugging* the drive, enabling *non*-programmers to participate.
 ____
