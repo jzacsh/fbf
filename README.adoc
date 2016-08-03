@@ -23,15 +23,14 @@ sentence:
 .End-Use Vision
 [[enduse]]
 ____
-Friends/family mail each high-capacity thumbdrives, w/their public keys in `/`
-directory, and with no further configuration: backup services added/removed by
-plugging/unplugging said drive. I particularly want *non*-programmer friends
-feeling empowered to host!
+Friends/family mail each high-capacity thumbdrives (w/public keys at `/`) and
+with no further configuration: a backup service is *added/removed* by
+*plugging/unplugging* the drive, enabling *non*-programmers to participate.
 ____
 
 Though, I haven't reached the parts I truly find interesting in this goal -
 _auto-detection of keys, auto-configuration, etc._ - I just finished working
-through {laborurl}[tediously documenting] all of the details in setting up an
+through {laborurl}[tediously documenting] the details to setup an
 auto-snapshotting rsync receptical.
 
 === tl;dr
