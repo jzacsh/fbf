@@ -86,5 +86,8 @@ Vagrant.configure("2") do |config|
     receptacle.vm.box = "debian/contrib-jessie64"
     receptacle.vm.network :private_network, ip: "10.0.0.12"
     receptacle.vm.hostname = "receptacle"
+
+    # TODO add provisioner, just for e2e-testing, to automate raspi-config
+    receptacle.vm.provision "shell", path: "src/provision-server.sh"
   end
 end
