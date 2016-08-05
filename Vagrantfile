@@ -12,7 +12,7 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = "skade/rasperry-pi-devbox"
+  config.vm.box = "debian/contrib-jessie64"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -76,14 +76,13 @@ Vagrant.configure("2") do |config|
 
   # Client machine: source of data being backed up. Uploads encrypted backups
   config.vm.define :client do |client|
-    client.vm.box = "debian/contrib-jessie64"
     client.vm.network :private_network, ip: "10.0.0.10"
     client.vm.hostname = "client"
   end
 
   # Receptacle machine: receipient of data being backed up. Recieves encrypted backups
   config.vm.define :receptacle do |receptacle|
-    receptacle.vm.box = "debian/contrib-jessie64"
+    receptacle.vm.box = "skade/rasperry-pi-devbox"
     receptacle.vm.network :private_network, ip: "10.0.0.12"
     receptacle.vm.hostname = "receptacle"
 
