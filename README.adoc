@@ -38,7 +38,7 @@ auto-snapshotting rsync receptical.
 === tl;dr
 Currently at documentation/research stages. Peer into my notes, on a
 push-to-server rsnapshot solution {laborurl}[`labor.adoc`] (<<serverlabor,
-summary>>), and feel free to ping me on #freenode (jzaksh@)
+summary>>), and feel free to ping me on freenode @jzaksh or email me.
 
 === Roadmap
 To get to my <<enduse, envisioned use-case>>, I'm roughly following these steps:
