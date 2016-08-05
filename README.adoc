@@ -6,8 +6,10 @@ Jonathan Zacsh, <jzacsh@gmail.com>
 :log2rotate: link:src/log2rotate
 :daemonflow: link:doc/remotedrivedaemon.adoc
 :c75bc52: https://github.com/jzacsh/fbsn/tree/c75bc52
-:O: pass:normal[ {nbsp} ]
-:D: pass:normal[ &#10004; ]
+:installer: https://github.com/jzacsh/fbsn/tree/installer-provision-receptacle
+:O: pass:normal[ &lbrack;&nbsp;&rbrack; ]
+:D: pass:normal[ &lbrack;&#10004;&rbrack; ]
+:P: pass:normal[ &lbrack;&#9202;&rbrack; ]
 
 _"FBF - backups for BFFs"_: flexible, decentralized backups.
 
@@ -48,7 +50,8 @@ To get to my <<enduse, envisioned use-case>>, I'm roughly following these steps:
       footnoteref:[vmtesting, `src/rsyncrotate-forcedcmd.sh` & co are untested
       at `master` while I try to setup a two-VM local testing infrastructure for
       this repo]
-- {O} *current*: Installer: use said doc to automate single-user setup +
+- {P} Installer: {installer}[`installer-provision-receptacle` branch]:
+      use said doc to automate single-user setup +
       -- _As of 2016-07-31, enlisted someone to host 2nd setup remote to me_
 
 - {O} replace rsnapshot w/configurable-length {log2rotate}[`src/log2rotate`]
