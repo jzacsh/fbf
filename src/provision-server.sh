@@ -28,7 +28,7 @@ sudo chmod 7750 "$privateTmp"
 sudo cp /etc/fstab{,.orig-"$(date --iso-8601=d)"}
 sudo cat >> /etc/fstab <<EOF_FSTAB
 # Auto-generated, $(date --iso-8601=ns), by https://github.com/jzacsh/fbf
-tmpfs $privateTmp tmpfs defaults,uid=999,gid=996,size=10K,mode=7770 0 0
+tmpfs $privateTmp tmpfs defaults,uid=${usrId},gid=${grpId},size=10K,mode=7770 0 0
 EOF_FSTAB
 sudo mount "$privateTmp"
 
