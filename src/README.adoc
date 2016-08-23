@@ -3,7 +3,7 @@
 Quick overeview of `src/` dir contents:
 
 `e2e`-prefixed files :: intended for internal testing use +
-  (eg: to setup headless testing servers). 
+  (eg: to setup headless testing servers).
 `prototype`-prefixed files :: intended as scratch pads/notes +
   (ie: no one should run them)
 `provision-server.sh` :: intended for end-users setting up server
