@@ -13,4 +13,4 @@ for act in up{date,grade,date}; do
   sudo apt-get --yes "$act" || exit 1
 done
 
-# TODO automate raspi-config
+#TODO install clone of this local repo (fbf)

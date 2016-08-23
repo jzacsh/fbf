@@ -92,8 +92,7 @@ Vagrant.configure("2") do |config|
     receptacle.vm.network :private_network, ip: "10.0.0.12"
     receptacle.vm.hostname = "receptacle"
 
-#TODO: uncomment bit-by-bit once you've done some manual test-runs
-#   receptacle.vm.provision "shell", path: "src/provision-server-mocklabor.sh"
-#   receptacle.vm.provision "shell", path: "src/provision-server.sh"
+    receptacle.vm.provision "shell", path: "src/e2e-provision-mocklabor.sh"
+    receptacle.vm.provision "shell", path: "src/provision-server.sh"
   end
 end
