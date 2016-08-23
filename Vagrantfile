@@ -69,6 +69,13 @@ Vagrant.configure("2") do |config|
   #   apt-get install -y apache2
   # SHELL
 
+  #TODO remove this provisioner; for easier debugging ONLY!
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    apt-get install -y vim
+    printf '" jzacsh@ debugging provisioner added:\nsyntax on\nset nu' >> /etc/vim/vimrc
+    printf '# jzacsh@ debugging provisioner added:\nset -o vi' >> /etc/bash.bashrc
+  SHELL
 
   #
   # Machines involved in testing
@@ -82,11 +89,11 @@ Vagrant.configure("2") do |config|
 
   # Receptacle machine: receipient of data being backed up. Recieves encrypted backups
   config.vm.define :receptacle do |receptacle|
-    receptacle.vm.box = "skade/rasperry-pi-devbox"
     receptacle.vm.network :private_network, ip: "10.0.0.12"
     receptacle.vm.hostname = "receptacle"
 
-    # TODO add provisioner, just for e2e-testing, to automate raspi-config
-    receptacle.vm.provision "shell", path: "src/provision-server.sh"
+#TODO: uncomment bit-by-bit once you've done some manual test-runs
+#   receptacle.vm.provision "shell", path: "src/provision-server-mocklabor.sh"
+#   receptacle.vm.provision "shell", path: "src/provision-server.sh"
   end
 end
