@@ -21,9 +21,16 @@ homeDir="$(
     cut --fields 6 --delimiter ':'
 )"; declare -r homeDir
 
+declare -r binDir="$homeDir"/bin/
 declare -r privateTmp="$homeDir"/tmp.backerconfs
-sudo mkdir "$privateTmp"
-sudo chown --recursive "$backerName":"$backerName" "$privateTmp"
+echo "
+  set -xe
+  mkdir "$privateTmp"
+  mkdir "$binDir"
+  wget --output-document=- 'https://www.samba.org/ftp/unpacked/rsync/support/rrsync' > "$binDir"/rrsync
+  chmod 744 "$binDir"/rrsync
+" | sudo --user "$backerName" bash -
+
 sudo chmod 7750 "$privateTmp"
 sudo cp /etc/fstab{,.orig-"$(date --iso-8601=d)"}
 sudo cat >> /etc/fstab <<EOF_FSTAB
