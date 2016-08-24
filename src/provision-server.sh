@@ -43,6 +43,6 @@ declare -a pkgs=(
   rsnapshot
 ); declare -r pkgs
 
-sudo apt-get install --yes "${pkgs[*]}"
+sudo apt-get install --yes ${pkgs[*]}
 
 sudo systemctl enable rsync.service
