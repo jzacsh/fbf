@@ -52,7 +52,8 @@ To get to my <<enduse, envisioned use-case>>, I'm roughly following these steps:
       this repo]
 - {P} Installer: {installer}[`installer-provision-receptacle` branch]:
       use said doc to automate single-user setup +
-      -- _As of 2016-07-31, enlisted someone to host 2nd setup remote to me_
+      -- _As of 2016-07-31, enlisted someone to host 2nd setup remote to me_ +
+      -- _As of 2016-08-24, finished VM e2e-testing infrastructure_
 
 - {O} replace rsnapshot w/configurable-length {log2rotate}[`src/log2rotate`]
 - {D} Daemon: {daemonflow}[rough implementation sketch] of automating HDD confs
